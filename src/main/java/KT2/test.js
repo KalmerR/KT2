@@ -1,25 +1,32 @@
-function addLetters(){
-	let test1 = document.getElementById("letters").value
-	//arr.push(test1);
-	document.getElementById("results").innerHTML = allAnagrams([test1]).join(",\n");
+var allAnagrams = function(word) {
+	var anagrams = {};
+	var recurse = function(ana, str) {
+		if (str === ''){
+			anagrams[ana] = 1;
+			//console.log(">", ana);
+			//postMessage({ 'anagram': ana });
+		}
+		for (var i = 0; i < str.length; i++){
+			recurse(ana + str[i], str.slice(0, i) + str.slice(i + 1));
+			//console.log("recurse",ana, str);
+		}
+	};
+
+	recurse('', word);
+	//return Object.keys(anagrams);
+	console.log("done", Object.keys(anagrams));
+	postMessage({ 'anagrams': Object.keys(anagrams) });
+	postMessage({ 'isDone': true });
+	this.close();
+
 }
 
-var arr = ['kati','venti'];
-
-function allAnagrams (arr) {
-    var anagrams = {};
-    arr.forEach(function(str) {
-        var recurse = function(ana, str) {
-            if (str === '') 
-                anagrams[ana] = 1;
-            for (var i = 0; i < str.length; i++)
-                recurse(ana + str[i], str.slice(0, i) + str.slice(i + 1));
-        };
-        recurse('', str);
-    });
-
-    return Object.keys(anagrams);
-
-}
-
-//console.log(allAnagrams(arr));
+onmessage = function(oEvent) {
+	//console.log("worker onmessage:", oEvent);
+	if (oEvent.data instanceof Object && oEvent.data.hasOwnProperty('word'))
+	{
+		allAnagrams(oEvent.data.word);
+	} else {
+		console.log("direct call to web worker, ignoring...");
+	}
+};

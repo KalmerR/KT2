@@ -1,15 +1,69 @@
+<!doctype html>
 <html>
 <head>
+	<meta charset="UTF-8"  />
 	<title>Kombinatsioonide leidmise leht</title>
-	<script src="test.js">
-		
+	<script type="text/javascript">
+
+		if (!window.Worker) {
+			alert("Brauser ei toeta Web Worker APIt! Sebi endale uuem brauser.");
+		}
+
+		var doButton, worker = null;
+
+		function createWorker() {
+			worker = new Worker('test.js');
+			worker.onmessage = function(event) {
+				//console.log("inbound onmessage", event);
+				if (event.data instanceof Object) {
+					if (event.data.hasOwnProperty('anagrams')) {
+						document.getElementById('results').appendChild(document.createTextNode(event.data.anagrams.join(",\n")));
+					}else if (event.data.hasOwnProperty('anagram')) {
+						// ei ole eriti efficient, dokumenti renderdatakse igakord uuesti
+						// jaota vist juppideks ja kasuta DocumentFragment'i
+						document.getElementById('results').appendChild(document.createTextNode(event.data.anagram + ",\n"));
+					}else if (event.data.hasOwnProperty('isDone')) {
+						cancel(doButton);
+					}
+				}
+			}
+		}
+
+		function cancel(ev){
+			let btn = this;
+			if (this instanceof Window) btn = ev;
+			//console.log("cancel", this, ev);
+			worker.terminate();
+			worker = null;
+			btn.onclick = addLetters;
+			btn.innerHTML = "Lisa ja näita";
+		}
+
+		function addLetters(ev){
+			//htmlis onclick paneb 'this'-iks Window ja ev'ks buttoni enda, onlick=... aga this'ks buttoni
+			let btn = this;
+			if (this instanceof Window) btn = ev;
+			//console.log("addLetters", this, ev);
+			createWorker();
+			btn.innerHTML = "Cancel";
+			btn.onclick = cancel;//.bind(ev);
+			document.getElementById('results').innerHTML = "";
+			let test1 = document.getElementById("letters").value;
+			worker.postMessage({'word': test1});
+			//arr.push(test1);
+			//document.getElementById("results").innerHTML = allAnagrams([test1]).join(",\n");
+		}
 	</script>
 </head>
 <body>
 <p>Kombinatsioonide leht </p>
 <input type="text" id ="letters" placeholder="Sisesta suvaline tähekombinatsioon"></input>
-<button type="submit" onclick="addLetters()" >Lisa ja näita</button>
+<button type="submit">Lisa ja näita</button>
     <br>
     <div id="results"></div>
+	<script type="text/javascript">
+		doButton = document.querySelector('button[type="submit"]');
+		doButton.onclick = addLetters;
+	</script>
 </body>
 </html>
