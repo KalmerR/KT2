@@ -11,20 +11,49 @@
 
 		var doButton, worker = null;
 
+		function FakeWorker(src){
+			let n = document.createElement('script');
+			n.setAttribute('src', src);
+			document.body.appendChild(n);
+			var that = this; //prolly ei suppordi bind()'i kah siis
+			window.postMessage = function(event){
+				that.onmessage({'data': event});
+			};
+		}
+
+		FakeWorker.prototype = {
+			onmessage: null,
+			postMessage: function(event) {
+				console.log(event);
+				allAnagrams.call(this, event.word);
+			},
+			terminate: function(){},
+			close: function(){},
+		}
+
 		function createWorker() {
-			worker = new Worker('test.js');
-			worker.onmessage = function(event) {
-				//console.log("inbound onmessage", event);
-				if (event.data instanceof Object) {
-					if (event.data.hasOwnProperty('anagrams')) {
-						document.getElementById('results').appendChild(document.createTextNode(event.data.anagrams.join(", ")));
-					}else if (event.data.hasOwnProperty('anagram')) {
-						// ei ole eriti efficient, dokumenti renderdatakse igakord uuesti
-						// jaota vist juppideks ja kasuta DocumentFragment'i
-						document.getElementById('results').appendChild(document.createTextNode(event.data.anagram + ",\n"));
-					}else if (event.data.hasOwnProperty('isDone')) {
-						cancel(doButton);
-					}
+			let w;
+			try {
+				w = new Worker('test.js');
+			} catch (e) {
+				w = new FakeWorker('test.js');
+			}
+
+			w.onmessage = gotMessage;
+			return w;
+		}
+
+		function gotMessage (event) {
+			console.log("inbound onmessage", event);
+			if (event.data instanceof Object) {
+				if (event.data.hasOwnProperty('anagrams')) {
+					document.getElementById('results').appendChild(document.createTextNode(event.data.anagrams.join(", ")));
+				}else if (event.data.hasOwnProperty('anagram')) {
+					// ei ole eriti efficient, dokumenti renderdatakse igakord uuesti
+					// jaota vist juppideks ja kasuta DocumentFragment'i
+					document.getElementById('results').appendChild(document.createTextNode(event.data.anagram + ",\n"));
+				}else if (event.data.hasOwnProperty('isDone')) {
+					cancel(doButton);
 				}
 			}
 		}
@@ -44,7 +73,7 @@
 			let btn = this;
 			if (this instanceof Window) btn = ev;
 			//console.log("addLetters", this, ev);
-			createWorker();
+			worker = createWorker();
 			btn.innerHTML = "Cancel";
 			btn.onclick = cancel;//.bind(ev);
 			document.getElementById('results').innerHTML = "";
@@ -58,9 +87,14 @@
 			doButton = document.querySelector('button[type="submit"]');
 			doButton.onclick = addLetters;
 		}
+		
+		function init() {
+			createWorker().close();
+			findButton();
+		}
 	</script>
 </head>
-<body onload="findButton()">
+<body onload="init()">
 <p>Kombinatsioonide leht </p>
 <input type="text" id ="letters" placeholder="Sisesta suvaline tähekombinatsioon"></input>
 <button type="submit">Lisa ja näita</button>

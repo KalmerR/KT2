@@ -3,7 +3,7 @@ function allAnagrams (word) {
 	var recurse = function(ana, str) {
 		if (str === ''){
 			anagrams[ana] = 1;
-			//console.log(">", ana);
+			console.log(">", ana);
 			//postMessage({ 'anagram': ana });
 		}
 		for (var i = 0; i < str.length; i++){
